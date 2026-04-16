@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Justin AI PM Dashboard</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 0; background: #f4f6f8; color: #1f2937; scroll-behavior: smooth; }
+    header { background: #111827; color: white; padding: 20px; }
+    header h1 { margin: 0; font-size: 28px; }
+    header p { margin: 6px 0 0; color: #d1d5db; }
+    .container { max-width: 1150px; margin: 24px auto; padding: 0 16px; }
+    .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .stat-card, .today-column, .empty { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .stat-card h2 { margin: 0; font-size: 14px; color: #6b7280; }
+    .stat-card .value { margin-top: 8px; font-size: 30px; font-weight: bold; }
+    .section-title { margin: 24px 0 12px; font-size: 22px; font-weight: bold; }
+    .commitments-grid { display: grid; gap: 16px; }
+    .commitment-card { background: white; border-radius: 12px; padding: 18px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); border-left: 6px solid #2563eb; }
+    .commitment-card.overdue { border-left-color: #dc2626; background: #fef2f2; }
+    .commitment-card.resolved { border-left-color: #16a34a; opacity: 0.95; }
+    .commitment-card.pending-review { border-left-color: #7c3aed; background: #f5f3ff; }
+    .commitment-card.priority-urgent { border-left-color: #dc2626; background: #fef2f2; box-shadow: 0 0 0 2px rgba(220,38,38,.15), 0 2px 8px rgba(0,0,0,.08); }
+    .commitment-card.priority-high { border-left-color: #f59e0b; background: #fffbeb; box-shadow: 0 0 0 2px rgba(245,158,11,.15), 0 2px 8px rgba(0,0,0,.08); }
+    .commitment-card.priority-normal { border-left-color: #2563eb; }
+    .commitment-card.priority-low { border-left-color: #6b7280; background: #f9fafb; }
+    .row { display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+    .field-block { min-width: 180px; flex: 1; }
+    .label { font-size: 12px; text-transform: uppercase; color: #6b7280; margin-bottom: 4px; }
+    .value { font-size: 16px; font-weight: 600; white-space: pre-wrap; }
+    .meta { margin-top: 14px; font-size: 14px; color: #4b5563; white-space: pre-wrap; }
+    .badge { display: inline-block; padding: 4px 10px; border-radius: 999px; font-size: 12px; font-weight: bold; background: #dbeafe; color: #1d4ed8; margin-left: 6px; margin-top: 4px; }
+    .badge.resolved { background: #dcfce7; color: #166534; }
+    .badge.overdue { background: #fee2e2; color: #991b1b; }
+    .badge.type { background: #ede9fe; color: #6d28d9; }
+    .badge.type-unknown { background: #fce7f3; color: #9d174d; }
+    .badge.review { background: #ede9fe; color: #6d28d9; }
+    .badge.priority-low { background: #e5e7eb; color: #374151; }
+    .badge.priority-normal { background: #dbeafe; color: #1d4ed8; }
+    .badge.priority-high { background: #fde68a; color: #92400e; }
+    .badge.priority-urgent { background: #fecaca; color: #991b1b; }
+    .actions, .form-actions, .top-actions, .owner-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions { margin-top: 14px; }
+    .top-actions, .owner-links { margin-bottom: 20px; }
+    button, .dashboard-link { background: #111827; color: white; border: none; border-radius: 8px; padding: 10px 14px; cursor: pointer; font-size: 14px; text-decoration: none; display: inline-block; }
+    button:hover, .dashboard-link:hover { background: #1f2937; }
+    button.secondary, .dashboard-link.secondary { background: #6b7280; }
+    button.secondary:hover, .dashboard-link.secondary:hover { background: #4b5563; }
+    button.success, .dashboard-link.success { background: #166534; }
+    button.success:hover, .dashboard-link.success:hover { background: #14532d; }
+    button.warning { background: #92400e; }
+    button.warning:hover { background: #78350f; }
+    .edit-form, .notes-form { margin-top: 16px; padding: 16px; border-radius: 10px; background: #f9fafb; border: 1px solid #e5e7eb; }
+    .form-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 14px; }
+    .form-group label { display: block; font-size: 12px; text-transform: uppercase; color: #6b7280; margin-bottom: 6px; font-weight: bold; }
+    .form-group input, .form-group textarea, .form-group select { width: 100%; box-sizing: border-box; border: 1px solid #d1d5db; border-radius: 8px; padding: 10px 12px; font-size: 14px; font-family: Arial, sans-serif; background: white; }
+    .form-group textarea { min-height: 90px; resize: vertical; }
+    .helper-text { margin-top: 10px; font-size: 13px; color: #6b7280; }
+    .today-board { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 24px; }
+    .today-column h3 { margin: 0 0 12px; font-size: 18px; }
+    .today-list { display: grid; gap: 10px; }
+    .today-mini-card { border: 1px solid #e5e7eb; border-left: 5px solid #2563eb; border-radius: 10px; padding: 10px 12px; background: #f9fafb; cursor: pointer; transition: transform .15s ease, box-shadow .15s ease; }
+    .today-mini-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,.10); }
+    .commitment-card.flash-highlight { box-shadow: 0 0 0 3px rgba(37,99,235,.25), 0 8px 20px rgba(0,0,0,.12); }
+    .today-mini-card.priority-urgent { border-left-color: #dc2626; background: #fef2f2; }
+    .today-mini-card.priority-high { border-left-color: #f59e0b; background: #fffbeb; }
+    .today-mini-card.priority-normal { border-left-color: #2563eb; background: #eff6ff; }
+    .today-mini-card.priority-low { border-left-color: #6b7280; background: #f3f4f6; }
+    .today-mini-card.overdue { border-left-color: #dc2626; background: #fef2f2; }
+    .today-mini-title { font-size: 14px; font-weight: bold; margin-bottom: 6px; }
+    .today-mini-meta { font-size: 12px; color: #4b5563; line-height: 1.5; }
+    .today-empty { font-size: 13px; color: #6b7280; padding: 4px 0; }
+    .details-toggle { margin-top: 14px; }
+    .details-panel { margin-top: 12px; padding-top: 12px; border-top: 1px solid #e5e7eb; display: none; }
+    .details-panel.open { display: block; }
+    .attachment-link { color: #2563eb; text-decoration: underline; cursor: pointer; background: none; border: none; padding: 0; font: inherit; }
+    .gallery-modal { position: fixed; inset: 0; background: rgba(17,24,39,.88); display: none; align-items: center; justify-content: center; z-index: 2000; padding: 24px; }
+    .gallery-modal.open { display: flex; }
+    .gallery-content { position: relative; max-width: 1100px; max-height: 90vh; width: 100%; display: flex; align-items: center; justify-content: center; }
+    .gallery-image { max-width: 100%; max-height: 80vh; border-radius: 12px; box-shadow: 0 10px 30px rgba(0,0,0,.35); background: white; }
+    .gallery-close, .gallery-nav { position: absolute; border: none; border-radius: 999px; width: 44px; height: 44px; font-size: 22px; line-height: 44px; text-align: center; cursor: pointer; background: rgba(255,255,255,.9); color: #111827; padding: 0; }
+    .gallery-close { top: -14px; right: -14px; }
+    .gallery-nav.prev { left: 12px; }
+    .gallery-nav.next { right: 12px; }
+    .gallery-caption { position: absolute; bottom: -44px; left: 0; right: 0; text-align: center; color: white; font-size: 14px; }
+    .notes-list { display: grid; gap: 10px; margin-top: 12px; }
+    .note-card { background: white; border: 1px solid #e5e7eb; border-radius: 10px; padding: 12px; }
+    .note-meta { font-size: 12px; color: #6b7280; margin-bottom: 8px; }
+    .note-text { white-space: pre-wrap; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1 id="pageTitle">Justin AI PM Dashboard</h1>
+    <p id="pageSubtitle">Tasks, commitments, reminders, and follow-ups for site operations</p>
+  </header>
+
+  <div class="container">
+    <div class="stats">
+      <div class="stat-card"><h2>Total Items</h2><div class="value" id="totalCount">0</div></div>
+      <div class="stat-card"><h2>Open</h2><div class="value" id="openCount">0</div></div>
+      <div class="stat-card"><h2>Resolved</h2><div class="value" id="resolvedCount">0</div></div>
+      <div class="stat-card"><h2>Overdue</h2><div class="value" id="overdueCount">0</div></div>
+    </div>
+
+    <div class="top-actions">
+      <button onclick="loadCommitments()">Refresh Dashboard</button>
+      <button class="success" onclick="toggleNewTaskForm()">Add Task</button>
+      <button class="secondary" onclick="toggleResolvedSection()" id="toggleResolvedButton">Collapse Resolved</button>
+    </div>
+
+    <div class="owner-links" id="ownerDashboardLinks">
+      <a class="dashboard-link secondary" id="mainDashboardLink" href="/dashboard.html">Main Dashboard</a>
+      <a class="dashboard-link secondary" id="kevinDashboardLink" href="/kevin-g.html">Kevin G Dashboard</a>
+      <a class="dashboard-link secondary" id="justinVDashboardLink" href="/justin-v.html">Justin V Dashboard</a>
+    </div>
+
+    <div id="newTaskForm" class="stat-card" style="margin-bottom:24px;display:none;">
+      <div class="section-title" style="margin-top:0;">Add New Task</div>
+      <div class="form-grid">
+        <div class="form-group"><label for="newOwner">Owner</label><select id="newOwner"></select></div>
+        <div class="form-group"><label for="newTask">Task</label><input id="newTask" type="text" placeholder="Follow up on windows" /></div>
+        <div class="form-group"><label for="newDueDate">Due Date</label><input id="newDueDate" type="text" placeholder="Friday, next week Thursday, April 22" /></div>
+        <div class="form-group"><label for="newTrade">Trade</label><input id="newTrade" type="text" placeholder="Plumbing, Electrical..." /></div>
+        <div class="form-group"><label for="newItemType">Type</label><select id="newItemType"><option value="task">Task</option><option value="commitment">Commitment</option><option value="follow_up">Follow-up</option><option value="reminder">Reminder</option><option value="issue">Issue</option><option value="unknown">Unknown</option></select></div>
+        <div class="form-group"><label for="newPriority">Priority</label><select id="newPriority"><option value="low">Low</option><option value="normal" selected>Normal</option><option value="high">High</option><option value="urgent">Urgent</option></select></div>
+      </div>
+      <div class="form-group" style="margin-top:14px;"><label for="newTaskFiles">Attachments</label><input id="newTaskFiles" type="file" multiple /></div>
+      <div class="form-actions"><button class="success" onclick="createTask()">Save Task</button><button class="secondary" onclick="toggleNewTaskForm(false)">Cancel</button></div>
+    </div>
+
+    <div class="stat-card" style="margin-bottom:24px;">
+      <div class="form-grid">
+        <div class="form-group"><label for="searchInput">Search</label><input id="searchInput" type="text" placeholder="Search owner, task, trade, or raw text" oninput="applyFilters()" /></div>
+        <div class="form-group"><label for="statusFilter">Status</label><select id="statusFilter" onchange="applyFilters()"><option value="all">All</option><option value="open">Open</option><option value="resolved">Resolved</option></select></div>
+        <div class="form-group" id="ownerFilterGroup"><label for="ownerFilter">Owner</label><select id="ownerFilter" onchange="applyFilters()"></select></div>
+        <div class="form-group" id="tradeFilterGroup"><label for="tradeFilter">Trade</label><select id="tradeFilter" onchange="applyFilters()"><option value="all">All Trades</option></select></div>
+        <div class="form-group" id="typeFilterGroup"><label for="typeFilter">Type</label><select id="typeFilter" onchange="applyFilters()"><option value="all">All Types</option><option value="task">Task</option><option value="commitment">Commitment</option><option value="follow_up">Follow-up</option><option value="reminder">Reminder</option><option value="issue">Issue</option><option value="unknown">Unknown</option></select></div>
+        <div class="form-group"><label for="priorityFilter">Priority</label><select id="priorityFilter" onchange="applyFilters()"><option value="all">All Priorities</option><option value="urgent">Urgent</option><option value="high">High</option><option value="normal">Normal</option><option value="low">Low</option></select></div>
+        <div class="form-group"><label for="dueDateFilter">Due Date</label><select id="dueDateFilter" onchange="applyFilters()"><option value="all">All Due Dates</option><option value="overdue">Overdue</option><option value="today">Due Today</option><option value="tomorrow">Due Tomorrow</option><option value="this_week">Due This Week</option></select></div>
+      </div>
+    </div>
+
+    <div class="section-title">Today / This Week View</div>
+    <div id="todayBoard" class="today-board"></div>
+
+    <div id="needsReviewSection"><div class="section-title">Needs Review</div><div id="needsReviewCommitments" class="commitments-grid"></div></div>
+    <div class="section-title">Open Tasks & Commitments</div>
+    <div id="openCommitments" class="commitments-grid"></div>
+    <div id="resolvedSection"><div class="section-title">Completed Tasks & Commitments</div><div id="resolvedCommitments" class="commitments-grid"></div></div>
+  </div>
+
+  <div id="galleryModal" class="gallery-modal" onclick="handleGalleryBackdropClick(event)">
+    <div class="gallery-content">
+      <button class="gallery-close" onclick="closeGallery()" aria-label="Close gallery">×</button>
+      <button class="gallery-nav prev" onclick="changeGalleryImage(-1)" aria-label="Previous image">‹</button>
+      <img id="galleryImage" class="gallery-image" src="" alt="Attachment preview" />
+      <button class="gallery-nav next" onclick="changeGalleryImage(1)" aria-label="Next image">›</button>
+      <div id="galleryCaption" class="gallery-caption"></div>
+    </div>
+  </div>
+
+  <script>
+    const OWNER_OPTIONS = ["Kevin G", "Justin C", "Justin V", "Solomon P", "Blake P"];
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentPath = window.location.pathname.toLowerCase();
+    const PAGE_KEYS = {
+      main: urlParams.get("key") || "",
+      kevin: urlParams.get("key") || "",
+      justinv: urlParams.get("key") || "",
+    };
+    const FIXED_OWNER = currentPath.endsWith("/kevin-g.html") ? "Kevin G" : currentPath.endsWith("/justin-v.html") ? "Justin V" : (urlParams.get("owner") || "");
+    const IS_OWNER_PAGE = currentPath.endsWith("/kevin-g.html") || currentPath.endsWith("/justin-v.html") || !!urlParams.get("ownerView");
+    const HIDE_DELETE = IS_OWNER_PAGE || urlParams.get("hideDelete") === "1";
+    const HIDE_LINKS = IS_OWNER_PAGE || urlParams.get("hideLinks") === "1";
+    const IS_MAIN_DASHBOARD = !IS_OWNER_PAGE;
+    let editingId = null;
+    let addingNoteForId = null;
+    let allCommitments = [];
+    let expandedDetails = {};
+    let resolvedSectionCollapsed = false;
+    let currentGalleryImages = [];
+    let currentGalleryIndex = 0;
+
+    function formatDisplayDate(isoDate) { if (!isoDate) return "Not specified"; const parts = isoDate.split("-"); if (parts.length !== 3) return isoDate; const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])); return isNaN(date.getTime()) ? isoDate : date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }); }
+    function formatDateTime(value) { if (!value) return ""; const date = new Date(value); return isNaN(date.getTime()) ? value : date.toLocaleString("en-US", { month: "short", day: "numeric", year: "numeric", hour: "numeric", minute: "2-digit" }); }
+    function escapeHtml(value) { return String(value ?? "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&#39;"); }
+    function normalizeOwnerValue(value) { return (value || "").trim().toLowerCase(); }
+    function buildOwnerOptionsHtml(selectedValue, includeAll = false) { let html = includeAll ? '<option value="all">All Owners</option>' : ""; OWNER_OPTIONS.forEach(owner => { html += `<option value="${escapeHtml(owner)}" ${owner === selectedValue ? "selected" : ""}>${escapeHtml(owner)}</option>`; }); return html; }
+    function populateOwnerFields() { const newOwner = document.getElementById("newOwner"); const ownerFilter = document.getElementById("ownerFilter"); newOwner.innerHTML = buildOwnerOptionsHtml(FIXED_OWNER || "Justin C", false); ownerFilter.innerHTML = buildOwnerOptionsHtml(FIXED_OWNER || "all", true); if (FIXED_OWNER) { newOwner.value = FIXED_OWNER; newOwner.disabled = true; ownerFilter.value = FIXED_OWNER; ownerFilter.disabled = true; } else { ownerFilter.value = "all"; } }
+    function buildOwnerSelect(selectedValue, id) { return `<select id="${id}">${buildOwnerOptionsHtml(selectedValue || "Justin C", false)}</select>`; }
+    function buildDashboardLink(path, key) { return key ? `${path}?key=${encodeURIComponent(key)}` : path; }
+    function setupPage() {
+      const title = document.getElementById("pageTitle");
+      const subtitle = document.getElementById("pageSubtitle");
+      const ownerFilterGroup = document.getElementById("ownerFilterGroup");
+      const tradeFilterGroup = document.getElementById("tradeFilterGroup");
+      const typeFilterGroup = document.getElementById("typeFilterGroup");
+      const needsReviewSection = document.getElementById("needsReviewSection");
+      const ownerLinks = document.getElementById("ownerDashboardLinks");
+      document.getElementById("mainDashboardLink").href = buildDashboardLink('/dashboard.html', PAGE_KEYS.main);
+      document.getElementById("kevinDashboardLink").href = buildDashboardLink('/kevin-g.html', PAGE_KEYS.kevin);
+      document.getElementById("justinVDashboardLink").href = buildDashboardLink('/justin-v.html', PAGE_KEYS.justinv);
+      if (FIXED_OWNER) {
+        title.textContent = `${FIXED_OWNER} Dashboard`;
+        subtitle.textContent = `Tasks and commitments assigned to ${FIXED_OWNER}`;
+        if (ownerFilterGroup) ownerFilterGroup.style.display = "none";
+        if (tradeFilterGroup) tradeFilterGroup.style.display = "none";
+        if (typeFilterGroup) typeFilterGroup.style.display = "none";
+      }
+      if (!IS_MAIN_DASHBOARD && needsReviewSection) {
+        needsReviewSection.style.display = "none";
+      }
+      if (HIDE_LINKS && ownerLinks) {
+        ownerLinks.style.display = "none";
+      }
+      populateOwnerFields();
+    }
+
+    async function loadCommitments() { try { const response = await fetch("/commitments"); const commitments = await response.json(); allCommitments = commitments; populateTradeFilter(commitments); applyFilters(); } catch (error) { console.error("Failed to load commitments:", error); alert("Could not load commitments. Check that the server is running."); } }
+    function populateTradeFilter(commitments) { const tradeFilter = document.getElementById("tradeFilter"); const currentValue = tradeFilter.value; const trades = [...new Set(commitments.map(c => (c.trade || "").trim()).filter(Boolean).sort((a,b)=>a.localeCompare(b)))]; tradeFilter.innerHTML = '<option value="all">All Trades</option>'; trades.forEach(trade => { const option = document.createElement("option"); option.value = trade.toLowerCase(); option.textContent = trade; tradeFilter.appendChild(option); }); const stillExists = currentValue === "all" || trades.some(trade => trade.toLowerCase() === currentValue); tradeFilter.value = stillExists ? currentValue : "all"; }
+    function getTodayDateOnly() { const now = new Date(); return new Date(now.getFullYear(), now.getMonth(), now.getDate()); }
+    function getDateOnlyFromIso(isoDate) { if (!isoDate) return null; const parts = isoDate.split("-"); if (parts.length !== 3) return null; const date = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2])); return isNaN(date.getTime()) ? null : date; }
+    function getDaysDifferenceFromToday(isoDate) { const dueDate = getDateOnlyFromIso(isoDate); if (!dueDate) return null; return Math.round((dueDate.getTime() - getTodayDateOnly().getTime()) / 86400000); }
+    function getMondayOfCurrentWeek() { const today = getTodayDateOnly(); const day = today.getDay(); const diffToMonday = day === 0 ? -6 : 1 - day; const monday = new Date(today); monday.setDate(today.getDate() + diffToMonday); return monday; }
+    function getFridayOfCurrentWeek() { const friday = new Date(getMondayOfCurrentWeek()); friday.setDate(friday.getDate() + 4); return friday; }
+    function matchesDueDateFilter(item, dueDateFilter) { if (dueDateFilter === "all") return true; const dueDate = getDateOnlyFromIso(item.due_date_iso); if (!dueDate) return false; const dayDiff = getDaysDifferenceFromToday(item.due_date_iso); if (dueDateFilter === "overdue") return dayDiff !== null && dayDiff < 0; if (dueDateFilter === "today") return dayDiff === 0; if (dueDateFilter === "tomorrow") return dayDiff === 1; if (dueDateFilter === "this_week") { const monday = getMondayOfCurrentWeek(); const friday = getFridayOfCurrentWeek(); return dueDate >= monday && dueDate <= friday; } return true; }
+    function applyFilters() {
+      const searchText = document.getElementById("searchInput").value.trim().toLowerCase();
+      const statusFilter = document.getElementById("statusFilter").value;
+      const ownerFilter = document.getElementById("ownerFilter").value;
+      const tradeFilter = document.getElementById("tradeFilter").value;
+      const typeFilter = document.getElementById("typeFilter").value;
+      const priorityFilter = document.getElementById("priorityFilter").value;
+      const dueDateFilter = document.getElementById("dueDateFilter").value;
+      const lockedOwner = normalizeOwnerValue(FIXED_OWNER);
+      const filtered = allCommitments.filter(item => {
+        const itemOwner = normalizeOwnerValue(item.owner);
+        const matchesSearch = !searchText || (item.owner || "").toLowerCase().includes(searchText) || (item.task || "").toLowerCase().includes(searchText) || (item.trade || "").toLowerCase().includes(searchText) || (item.raw_text || "").toLowerCase().includes(searchText) || (item.item_type || "").toLowerCase().includes(searchText) || (item.priority || "").toLowerCase().includes(searchText) || (item.notes || []).some(note => (note.text || "").toLowerCase().includes(searchText));
+        const matchesStatus = statusFilter === "all" || (statusFilter === "open" && item.status !== "resolved") || (statusFilter === "resolved" && item.status === "resolved");
+        const matchesOwner = lockedOwner ? itemOwner === lockedOwner : ownerFilter === "all" || itemOwner === normalizeOwnerValue(ownerFilter);
+        const matchesTrade = tradeFilter === "all" || (item.trade || "").toLowerCase() === tradeFilter;
+        const matchesType = typeFilter === "all" || (item.item_type || "").toLowerCase() === typeFilter;
+        const matchesPriority = priorityFilter === "all" || (item.priority || "normal").toLowerCase() === priorityFilter;
+        const matchesDueDate = matchesDueDateFilter(item, dueDateFilter);
+        const approvalVisible = IS_MAIN_DASHBOARD ? true : (item.approval_status || 'approved') === 'approved';
+        return matchesSearch && matchesStatus && matchesOwner && matchesTrade && matchesType && matchesPriority && matchesDueDate && approvalVisible;
+      });
+      renderTodayBoard(filtered);
+      renderCommitments(filtered);
+    }
+    function getPriorityRank(priority) { if (priority === "urgent") return 1; if (priority === "high") return 2; if (priority === "normal") return 3; if (priority === "low") return 4; return 5; }
+    function sortTodayBoardItems(items) { return items.sort((a,b)=>{ const pd = getPriorityRank(a.priority)-getPriorityRank(b.priority); if (pd!==0) return pd; return (a.due_date_iso || "9999-12-31").localeCompare(b.due_date_iso || "9999-12-31"); }); }
+    function createTodayMiniCard(item, label) { const overdueClass = item.is_overdue ? " overdue" : ""; const priorityClass = item.priority ? ` priority-${item.priority}` : " priority-normal"; return `<div class="today-mini-card${overdueClass}${priorityClass}" onclick="scrollToCommitment('${item.id}')"><div class="today-mini-title">${escapeHtml(item.task || 'No task')}</div><div class="today-mini-meta"><div><strong>${escapeHtml(label)}</strong></div><div>Owner: ${escapeHtml(item.owner || 'Unknown')}</div><div>Due: ${escapeHtml(formatDisplayDate(item.due_date_iso))}</div><div>Type: ${escapeHtml(item.item_type || 'commitment')}</div><div>Priority: ${escapeHtml(item.priority || 'normal')}</div></div></div>`; }
+    function renderTodayColumn(title, items, label) { return items.length ? `<div class="today-column"><h3>${escapeHtml(title)}</h3><div class="today-list">${items.map(item=>createTodayMiniCard(item,label)).join("")}</div></div>` : `<div class="today-column"><h3>${escapeHtml(title)}</h3><div class="today-empty">No items</div></div>`; }
+    function renderTodayBoard(commitments) { const todayBoard = document.getElementById("todayBoard"); if (!todayBoard) return; const openItems = commitments.filter(item => item.status !== "resolved" && (item.approval_status || 'approved') === 'approved'); const overdueItems=[]; const todayItems=[]; const tomorrowItems=[]; const thisWeekItems=[]; const highPriorityItems=[]; openItems.forEach(item=>{ const dayDiff=getDaysDifferenceFromToday(item.due_date_iso); if (item.priority === "urgent" || item.priority === "high") highPriorityItems.push(item); if (dayDiff===null) return; if (dayDiff<0) overdueItems.push(item); else if (dayDiff===0) todayItems.push(item); else if (dayDiff===1) tomorrowItems.push(item); else { const dueDate = getDateOnlyFromIso(item.due_date_iso); const monday = getMondayOfCurrentWeek(); const friday = getFridayOfCurrentWeek(); if (dueDate && dueDate >= monday && dueDate <= friday) thisWeekItems.push(item); } }); [overdueItems,todayItems,tomorrowItems,thisWeekItems,highPriorityItems].forEach(sortTodayBoardItems); todayBoard.innerHTML = `${renderTodayColumn('Overdue', overdueItems, 'Overdue')}${renderTodayColumn('Due Today', todayItems, 'Today')}${renderTodayColumn('Due Tomorrow', tomorrowItems, 'Tomorrow')}${renderTodayColumn('This Week', thisWeekItems, 'This Week')}${renderTodayColumn('High / Urgent Priority', highPriorityItems, 'Priority')}`; }
+    function scrollToCommitment(id) { const element = document.getElementById(`commitment-${id}`); if (!element) return; element.scrollIntoView({ behavior: "smooth", block: "center" }); element.classList.add("flash-highlight"); setTimeout(()=>element.classList.remove("flash-highlight"), 1600); }
+    function renderCommitments(commitments) {
+      const openContainer = document.getElementById("openCommitments");
+      const needsReviewContainer = document.getElementById("needsReviewCommitments");
+      const resolvedContainer = document.getElementById("resolvedCommitments");
+      needsReviewContainer.innerHTML = "";
+      openContainer.innerHTML = "";
+      resolvedContainer.innerHTML = "";
+      const reviewItems = commitments.filter(c => c.status !== "resolved" && ((c.item_type || "").toLowerCase() === "unknown" || (c.approval_status || 'approved') === 'pending_review')).sort((a,b)=>(a.created_at || '').localeCompare(b.created_at || ''));
+      const openItems = commitments.filter(c => c.status !== "resolved" && (c.item_type || "").toLowerCase() !== "unknown" && (c.approval_status || 'approved') === 'approved').sort((a,b)=>(a.due_date_iso || '9999-12-31').localeCompare(b.due_date_iso || '9999-12-31'));
+      const resolvedItems = commitments.filter(c => c.status === "resolved" && (c.approval_status || 'approved') === 'approved').sort((a,b)=>(b.updated_at || '').localeCompare(a.updated_at || ''));
+      const overdueItems = openItems.filter(c => c.is_overdue);
+      document.getElementById("totalCount").textContent = commitments.length;
+      document.getElementById("openCount").textContent = openItems.length;
+      document.getElementById("resolvedCount").textContent = resolvedItems.length;
+      document.getElementById("overdueCount").textContent = overdueItems.length;
+      const resolvedSection = document.getElementById("resolvedSection");
+      const toggleButton = document.getElementById("toggleResolvedButton");
+      if (resolvedSection && toggleButton) { resolvedSection.style.display = resolvedSectionCollapsed ? "none" : "block"; toggleButton.textContent = resolvedSectionCollapsed ? "Show Resolved" : "Collapse Resolved"; }
+      if (IS_MAIN_DASHBOARD) {
+        needsReviewContainer.innerHTML = reviewItems.length ? "" : '<div class="empty">No items need review.</div>';
+        reviewItems.forEach(item => needsReviewContainer.appendChild(createCard(item, false)));
+      }
+      openContainer.innerHTML = openItems.length ? "" : '<div class="empty">No open items match your filters.</div>';
+      openItems.forEach(item => openContainer.appendChild(createCard(item, false)));
+      resolvedContainer.innerHTML = resolvedItems.length ? "" : '<div class="empty">No completed items match your filters.</div>';
+      resolvedItems.forEach(item => resolvedContainer.appendChild(createCard(item, true)));
+    }
+    function createCard(item, resolved) {
+      const overdue = item.is_overdue && !resolved;
+      const isEditing = editingId === item.id;
+      const notesOpen = addingNoteForId === item.id;
+      const isPendingReview = (item.approval_status || 'approved') === 'pending_review';
+      const card = document.createElement("div");
+      card.className = `commitment-card${resolved ? ' resolved' : ''}${overdue ? ' overdue' : ''}${item.priority ? ` priority-${item.priority}` : ''}${isPendingReview ? ' pending-review' : ''}`;
+      card.id = `commitment-${item.id}`;
+      const itemTypeDisplay = item.item_type || "commitment";
+      const priorityDisplay = item.priority || "normal";
+      const detailsOpen = !!expandedDetails[item.id];
+      card.innerHTML = `${overdue ? '<div style="color:#b91c1c;font-weight:bold;margin-bottom:8px;">⚠ OVERDUE</div>' : ''}${isPendingReview ? '<div style="color:#6d28d9;font-weight:bold;margin-bottom:8px;">Needs approval before becoming a live tile</div>' : ''}<div class="row"><div class="field-block"><div class="label">Owner</div><div class="value">${escapeHtml(item.owner || 'Unknown')}</div></div><div><span class="badge ${resolved ? 'resolved' : ''}">${resolved ? 'Resolved' : 'Open'}</span>${overdue ? '<span class="badge overdue">Overdue</span>' : ''}${isPendingReview ? '<span class="badge review">Pending Review</span>' : ''}<span class="badge type ${itemTypeDisplay === 'unknown' ? 'type-unknown' : ''}">${escapeHtml(itemTypeDisplay)}</span><span class="badge priority-${escapeHtml(priorityDisplay)}">${escapeHtml(priorityDisplay)}</span></div></div><div class="row" style="margin-top:14px;"><div class="field-block"><div class="label">Task</div><div class="value">${escapeHtml(item.task || 'No task')}</div></div><div class="field-block"><div class="label">Due</div><div class="value">${escapeHtml(formatDisplayDate(item.due_date_iso))}</div></div><div class="field-block"><div class="label">Trade</div><div class="value">${escapeHtml(item.trade || 'Not specified')}</div></div></div><div class="details-toggle"><button class="secondary" onclick="toggleCardDetails('${item.id}')">${detailsOpen ? 'Hide Details' : 'Show Details'}</button></div><div class="details-panel ${detailsOpen ? 'open' : ''}"><div class="meta">Confidence: ${escapeHtml(item.confidence ?? 0)} | Source: ${escapeHtml(item.source || 'unknown')}</div><div class="meta">Raw: ${escapeHtml(item.raw_text || '')}</div><div class="meta">Normalized due date: ${escapeHtml(formatDisplayDate(item.due_date_iso))}</div><div class="meta">Attachments: ${renderAttachmentLinks(item)}</div><div class="meta">Notes:</div>${renderNotes(item)}</div><div class="actions"><button onclick="startEdit('${item.id}')">Edit</button><button class="secondary" onclick="toggleNoteForm('${item.id}')">${notesOpen ? 'Cancel Note' : 'Add Note'}</button><label style="display:inline-block;"><input type="file" multiple style="display:none;" onchange="uploadFiles('${item.id}', this.files)" /><span class="secondary" style="display:inline-block;cursor:pointer;padding:10px 14px;border-radius:8px;background:#6b7280;color:white;font-size:14px;">Attach Files</span></label>${IS_MAIN_DASHBOARD && isPendingReview ? `<button class="success" onclick="approveCommitment('${item.id}')">Approve</button>` : ''}${!HIDE_DELETE ? `<button class="secondary" onclick="deleteCommitment('${item.id}')">Delete</button>` : ''}${resolved ? `<button class="warning" onclick="reopenCommitment('${item.id}')">Reopen</button>` : `<button class="success" onclick="resolveCommitment('${item.id}')">Mark Resolved</button>`}</div>`;
+      if (notesOpen) {
+        const noteForm = document.createElement('div');
+        noteForm.className = 'notes-form';
+        noteForm.innerHTML = `<div class="form-grid"><div class="form-group"><label for="note-owner-${item.id}">Note Owner</label>${buildOwnerSelect(FIXED_OWNER || 'Justin C', `note-owner-${item.id}`)}</div><div class="form-group" style="grid-column:1 / -1;"><label for="note-text-${item.id}">Note</label><textarea id="note-text-${item.id}" placeholder="Add a note. Saved notes cannot be edited."></textarea></div></div><div class="form-actions"><button class="success" onclick="saveNote('${item.id}')">Save Note</button><button class="secondary" onclick="toggleNoteForm('${item.id}')">Cancel</button></div><div class="helper-text">Saved notes are time stamped and locked.</div>`;
+        card.appendChild(noteForm);
+        if (FIXED_OWNER) {
+          const noteOwnerSelect = noteForm.querySelector(`#note-owner-${item.id}`);
+          if (noteOwnerSelect) {
+            noteOwnerSelect.value = FIXED_OWNER;
+            noteOwnerSelect.disabled = true;
+          }
+        }
+      }
+      if (isEditing) {
+        const form = document.createElement("div");
+        form.className = "edit-form";
+        form.innerHTML = `<div class="form-grid"><div class="form-group"><label for="owner-${item.id}">Owner</label>${buildOwnerSelect(item.owner || 'Justin C', `owner-${item.id}`)}</div><div class="form-group"><label for="due-${item.id}">Due Date</label><input id="due-${item.id}" type="text" value="${escapeHtml(item.due_date_text || '')}" /></div><div class="form-group"><label for="trade-${item.id}">Trade</label><input id="trade-${item.id}" type="text" value="${escapeHtml(item.trade || '')}" /></div><div class="form-group"><label for="item-type-${item.id}">Type</label><select id="item-type-${item.id}"><option value="task" ${(item.item_type || '') === 'task' ? 'selected' : ''}>Task</option><option value="commitment" ${(item.item_type || '') === 'commitment' ? 'selected' : ''}>Commitment</option><option value="follow_up" ${(item.item_type || '') === 'follow_up' ? 'selected' : ''}>Follow-up</option><option value="reminder" ${(item.item_type || '') === 'reminder' ? 'selected' : ''}>Reminder</option><option value="issue" ${(item.item_type || '') === 'issue' ? 'selected' : ''}>Issue</option><option value="unknown" ${(item.item_type || '') === 'unknown' ? 'selected' : ''}>Unknown</option></select></div><div class="form-group"><label for="priority-${item.id}">Priority</label><select id="priority-${item.id}"><option value="low" ${(item.priority || '') === 'low' ? 'selected' : ''}>Low</option><option value="normal" ${(item.priority || 'normal') === 'normal' ? 'selected' : ''}>Normal</option><option value="high" ${(item.priority || '') === 'high' ? 'selected' : ''}>High</option><option value="urgent" ${(item.priority || '') === 'urgent' ? 'selected' : ''}>Urgent</option></select></div><div class="form-group" style="grid-column:1 / -1;"><label for="task-${item.id}">Task</label><textarea id="task-${item.id}">${escapeHtml(item.task || '')}</textarea></div></div><div class="form-actions"><button class="success" onclick="saveEdit('${item.id}')">Save Changes</button><button class="secondary" onclick="cancelEdit()">Cancel</button></div><div class="helper-text">Due date examples: Friday, next Friday, April 22, in 3 days, end of month</div>`;
+        card.appendChild(form);
+        if (FIXED_OWNER) {
+          const ownerSelect = form.querySelector(`#owner-${item.id}`);
+          if (ownerSelect) {
+            ownerSelect.value = FIXED_OWNER;
+            ownerSelect.disabled = true;
+          }
+        }
+      }
+      return card;
+    }
+    function renderNotes(item) { const notes = Array.isArray(item.notes) ? item.notes : []; if (!notes.length) return '<div class="notes-list"><div class="note-card"><div class="note-text">No notes yet</div></div></div>'; return `<div class="notes-list">${notes.slice().sort((a,b)=> (b.created_at || '').localeCompare(a.created_at || '')).map(note => `<div class="note-card"><div class="note-meta">${escapeHtml(note.author || 'Unknown')} • ${escapeHtml(formatDateTime(note.created_at))}</div><div class="note-text">${escapeHtml(note.text || '')}</div></div>`).join('')}</div>`; }
+    function renderAttachmentLinks(item) { if (!(item.attachments && item.attachments.length)) return 'None'; return item.attachments.map((attachment, index) => { const label = attachment.file_name ? attachment.file_name.replace(/^telegram-\d+-?/, '') : (attachment.type === 'image' ? `Photo ${index + 1}` : `File ${index + 1}`); if (attachment.type === 'image' && attachment.url) { const imageAttachments = (item.attachments || []).filter(a => a.type === 'image' && a.url); const imageIndex = imageAttachments.findIndex(a => a.url === attachment.url); const payload = encodeURIComponent(JSON.stringify(imageAttachments.map(a => ({ url: a.url, file_name: a.file_name || '' })))); return `<button class="attachment-link" onclick="openGalleryFromEncoded('${payload}', ${imageIndex})">${escapeHtml(label)}</button>`; } return `<a href="${escapeHtml(attachment.url || '#')}" target="_blank" rel="noopener noreferrer">${escapeHtml(label)}</a>`; }).join(' | '); }
+    function toggleCardDetails(id) { expandedDetails[id] = !expandedDetails[id]; applyFilters(); }
+    function startEdit(id) { editingId = id; loadCommitments(); }
+    function cancelEdit() { editingId = null; loadCommitments(); }
+    function toggleNoteForm(id) { addingNoteForId = addingNoteForId === id ? null : id; loadCommitments(); }
+    async function saveEdit(id) { const owner = FIXED_OWNER || document.getElementById(`owner-${id}`).value; const task = document.getElementById(`task-${id}`).value; const due_date_text = document.getElementById(`due-${id}`).value; const trade = document.getElementById(`trade-${id}`).value; const item_type = document.getElementById(`item-type-${id}`).value; const priority = document.getElementById(`priority-${id}`).value; try { const response = await fetch(`/commitments/${id}/update`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owner, task, due_date_text, trade, item_type, priority }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Failed to save changes'); editingId = null; loadCommitments(); } catch (error) { console.error('Save failed:', error); alert('Could not save changes: ' + error.message); } }
+    async function saveNote(id) { const owner = FIXED_OWNER || document.getElementById(`note-owner-${id}`).value; const text = document.getElementById(`note-text-${id}`).value.trim(); if (!text) { alert('Note text is required.'); return; } try { const response = await fetch(`/commitments/${id}/notes`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ author: owner, text }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not save note.'); addingNoteForId = null; loadCommitments(); } catch (error) { console.error('Note save failed:', error); alert('Could not save note: ' + error.message); } }
+    async function approveCommitment(id) { try { const response = await fetch(`/commitments/${id}/approve`, { method: 'POST' }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not approve item.'); loadCommitments(); } catch (error) { console.error('Approve failed:', error); alert('Could not approve item: ' + error.message); } }
+    async function resolveCommitment(id) { try { const response = await fetch(`/commitments/${id}/resolve`, { method: 'POST' }); if (!response.ok) throw new Error('Failed to resolve item'); if (editingId === id) editingId = null; loadCommitments(); } catch (error) { console.error('Resolve failed:', error); alert('Could not mark item as resolved.'); } }
+    async function reopenCommitment(id) { try { const response = await fetch(`/commitments/${id}/reopen`, { method: 'POST' }); if (!response.ok) throw new Error('Failed to reopen item'); if (editingId === id) editingId = null; loadCommitments(); } catch (error) { console.error('Reopen failed:', error); alert('Could not reopen item.'); } }
+    async function deleteCommitment(id) { if (!confirm('Are you sure you want to delete this item?')) return; try { const response = await fetch(`/commitments/${id}`, { method: 'DELETE' }); if (!response.ok) throw new Error('Delete failed'); loadCommitments(); } catch (error) { console.error('Delete failed:', error); alert('Could not delete item.'); } }
+    function toggleResolvedSection() { resolvedSectionCollapsed = !resolvedSectionCollapsed; const resolvedSection = document.getElementById('resolvedSection'); const toggleButton = document.getElementById('toggleResolvedButton'); if (!resolvedSection || !toggleButton) return; resolvedSection.style.display = resolvedSectionCollapsed ? 'none' : 'block'; toggleButton.textContent = resolvedSectionCollapsed ? 'Show Resolved' : 'Collapse Resolved'; }
+    function toggleNewTaskForm(forceState) { const form = document.getElementById('newTaskForm'); form.style.display = typeof forceState === 'boolean' ? (forceState ? 'block' : 'none') : (form.style.display === 'none' ? 'block' : 'none'); }
+    async function createTask() { const owner = FIXED_OWNER || document.getElementById('newOwner').value.trim(); const task = document.getElementById('newTask').value.trim(); const due_date_text = document.getElementById('newDueDate').value.trim(); const trade = document.getElementById('newTrade').value.trim(); const item_type = document.getElementById('newItemType').value; const priority = document.getElementById('newPriority').value; const files = document.getElementById('newTaskFiles').files; if (!task) { alert('Task is required.'); return; } try { const response = await fetch('/commitments/create', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ owner, task, due_date_text, trade, item_type, priority, approval_status: IS_MAIN_DASHBOARD ? 'approved' : 'approved' }) }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Could not create task.'); const createdId = result.commitment && result.commitment.id; if (createdId && files && files.length) { await uploadFiles(createdId, files, false); } document.getElementById('newOwner').value = FIXED_OWNER || 'Justin C'; document.getElementById('newTask').value = ''; document.getElementById('newDueDate').value = ''; document.getElementById('newTrade').value = ''; document.getElementById('newItemType').value = 'task'; document.getElementById('newPriority').value = 'normal'; document.getElementById('newTaskFiles').value = ''; toggleNewTaskForm(false); loadCommitments(); } catch (error) { console.error('Create task failed:', error); alert('Could not create task: ' + error.message); } }
+    async function uploadFiles(id, files, reload = true) { if (!files || !files.length) return; const formData = new FormData(); for (const file of files) formData.append('files', file); try { const response = await fetch(`/commitments/${id}/upload`, { method: 'POST', body: formData }); const result = await response.json(); if (!response.ok) throw new Error(result.error || 'Upload failed'); if (reload) loadCommitments(); } catch (error) { console.error('Upload failed:', error); alert('Could not upload files: ' + error.message); } }
+    function openGalleryFromEncoded(encodedImages, startIndex = 0) { try { const images = JSON.parse(decodeURIComponent(encodedImages)); currentGalleryImages = Array.isArray(images) ? images : []; currentGalleryIndex = startIndex >= 0 ? startIndex : 0; renderGallery(); } catch (error) { console.error('Could not open gallery:', error); } }
+    function renderGallery() { const modal = document.getElementById('galleryModal'); const image = document.getElementById('galleryImage'); const caption = document.getElementById('galleryCaption'); if (!modal || !image || !caption || !currentGalleryImages.length) return; const current = currentGalleryImages[currentGalleryIndex]; image.src = current.url; caption.textContent = current.file_name ? current.file_name.replace(/^telegram-\d+-?/, '') : `Image ${currentGalleryIndex + 1}`; modal.classList.add('open'); }
+    function closeGallery() { const modal = document.getElementById('galleryModal'); const image = document.getElementById('galleryImage'); if (modal) modal.classList.remove('open'); if (image) image.src = ''; currentGalleryImages = []; currentGalleryIndex = 0; }
+    function changeGalleryImage(direction) { if (!currentGalleryImages.length) return; currentGalleryIndex += direction; if (currentGalleryIndex < 0) currentGalleryIndex = currentGalleryImages.length - 1; if (currentGalleryIndex >= currentGalleryImages.length) currentGalleryIndex = 0; renderGallery(); }
+    function handleGalleryBackdropClick(event) { if (event.target && event.target.id === 'galleryModal') closeGallery(); }
+    document.addEventListener('keydown', (event) => { const modal = document.getElementById('galleryModal'); if (!modal || !modal.classList.contains('open')) return; if (event.key === 'Escape') closeGallery(); else if (event.key === 'ArrowLeft') changeGalleryImage(-1); else if (event.key === 'ArrowRight') changeGalleryImage(1); });
+    setupPage();
+    loadCommitments();
+  </script>
+</body>
+</html>
